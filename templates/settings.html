@@ -61,6 +61,21 @@
                                 You can find this in your YouTube channel settings or URL
                             </div>
                         </div>
+                        
+                        {% if session.get('youtube_refresh_token') %}
+                        <div class="mb-3">
+                            <label class="form-label">YouTube Refresh Token</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ session.get('youtube_refresh_token') }}" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('{{ session.get('youtube_refresh_token') }}')">
+                                    <i class="fas fa-copy me-1"></i>Copy
+                                </button>
+                            </div>
+                            <div class="form-text text-success">
+                                <i class="fas fa-info-circle me-1"></i>Save this refresh token as your YOUTUBE_REFRESH_TOKEN environment variable.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <!-- Video Settings -->
@@ -200,4 +215,20 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyToClipboard(text) {
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        
+        // Show a tooltip or some indication that the copy was successful
+        alert('Refresh token copied to clipboard!');
+    }
+</script>
 {% endblock %}

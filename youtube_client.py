@@ -3,8 +3,10 @@ import logging
 import json
 import time
 import requests
+import pickle
+from flask import url_for, redirect, session, request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -17,6 +19,9 @@ from config import (
 
 logger = logging.getLogger(__name__)
 
+# OAuth scopes needed for YouTube upload
+SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.readonly']
+
 class YouTubeClient:
     def __init__(self):
         self.api_key = YOUTUBE_API_KEY
@@ -27,8 +32,8 @@ class YouTubeClient:
     
     def _authenticate(self):
         """Authenticate with YouTube API using OAuth2."""
-        if not self.client_id or not self.client_secret or not self.refresh_token:
-            logger.warning("YouTube API OAuth credentials not found in environment variables.")
+        if not self.client_id or not self.client_secret:
+            logger.warning("YouTube API OAuth client credentials not found in environment variables.")
             if self.api_key:
                 # Fall back to API key for read-only operations
                 logger.info("Using YouTube API key for read-only operations.")
@@ -37,24 +42,115 @@ class YouTubeClient:
                 raise ValueError("No YouTube API credentials configured.")
         
         try:
-            # Create credentials from refresh token
-            credentials = Credentials(
-                token=None,
-                refresh_token=self.refresh_token,
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=self.client_id,
-                client_secret=self.client_secret
-            )
-            
-            # Check if the token is expired and refresh if needed
-            if credentials.expired:
-                credentials.refresh(Request())
-            
-            # Build the YouTube API client
-            return build('youtube', 'v3', credentials=credentials)
+            if self.refresh_token:
+                # Create credentials from refresh token if available
+                credentials = Credentials(
+                    token=None,
+                    refresh_token=self.refresh_token,
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id=self.client_id,
+                    client_secret=self.client_secret,
+                    scopes=SCOPES
+                )
+                
+                # Check if the token is expired and refresh if needed
+                if credentials.expired:
+                    credentials.refresh(Request())
+                
+                # Build the YouTube API client
+                return build('youtube', 'v3', credentials=credentials)
+            else:
+                # For read-only operations without a refresh token
+                if self.api_key:
+                    return build('youtube', 'v3', developerKey=self.api_key)
+                else:
+                    # If we have no tokens at all, return None and require authorization
+                    logger.warning("No refresh token available, authorization required.")
+                    return None
         except Exception as e:
             logger.error(f"Error authenticating with YouTube: {str(e)}")
             raise
+    
+    def generate_authorization_url(self, redirect_uri):
+        """Generate the authorization URL for YouTube OAuth."""
+        try:
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [redirect_uri]
+                    }
+                },
+                scopes=SCOPES
+            )
+            
+            flow.redirect_uri = redirect_uri
+            
+            # Generate the authorization URL
+            auth_url, _ = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                prompt='consent'  # Force prompt to ensure refresh token is returned
+            )
+            
+            # Store the flow state in the session or a cache
+            # This is important to be able to complete the flow later
+            pickled_flow = pickle.dumps(flow)
+            session['youtube_auth_flow'] = pickled_flow.hex()
+            
+            return auth_url
+        except Exception as e:
+            logger.error(f"Error generating YouTube authorization URL: {str(e)}")
+            raise
+    
+    def handle_authorization_response(self, authorization_response):
+        """Handle the authorization response and get tokens."""
+        try:
+            # Retrieve the flow from the session or cache
+            pickled_flow = bytes.fromhex(session.get('youtube_auth_flow', ''))
+            flow = pickle.loads(pickled_flow)
+            
+            # Process the authorization response
+            flow.fetch_token(authorization_response=authorization_response)
+            
+            # Get the credentials
+            credentials = flow.credentials
+            
+            # Store the refresh token
+            if credentials.refresh_token:
+                self.refresh_token = credentials.refresh_token
+                
+                # You might want to store this in a more permanent location like a database
+                # For now, we'll log it for the user to see
+                logger.info(f"YouTube refresh token obtained: {credentials.refresh_token}")
+                logger.info("Please set this as the YOUTUBE_REFRESH_TOKEN environment variable.")
+                
+                # Build the YouTube API client with the new credentials
+                self.youtube = build('youtube', 'v3', credentials=credentials)
+                
+                # Clean up the session
+                if 'youtube_auth_flow' in session:
+                    del session['youtube_auth_flow']
+                
+                return {
+                    'success': True,
+                    'refresh_token': credentials.refresh_token
+                }
+            else:
+                logger.error("No refresh token returned from YouTube API.")
+                return {
+                    'success': False,
+                    'error': 'No refresh token received. Please try again and ensure you approve all permissions.'
+                }
+        except Exception as e:
+            logger.error(f"Error handling YouTube authorization response: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def get_channel_info(self):
         """Get information about the authenticated user's channel."""

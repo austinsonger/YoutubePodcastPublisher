@@ -202,10 +202,67 @@ def test_youtube():
     
     try:
         youtube_client = YouTubeClient()
-        channel_info = youtube_client.get_channel_info()
-        flash(f'Successfully connected to YouTube. Channel name: {channel_info.get("title", "Unknown")}')
+        
+        # If we don't have a refresh token, redirect to authorization
+        if not youtube_client.refresh_token and youtube_client.client_id and youtube_client.client_secret:
+            return redirect(url_for('youtube_auth'))
+        
+        # If we have a refresh token, try to use it
+        if youtube_client.youtube:
+            channel_info = youtube_client.get_channel_info()
+            flash(f'Successfully connected to YouTube. Channel name: {channel_info.get("title", "Unknown")}')
+        else:
+            flash('YouTube API client not initialized. Please complete authorization.')
+            return redirect(url_for('youtube_auth'))
     except Exception as e:
         flash(f'Error connecting to YouTube: {str(e)}')
+    
+    return redirect(url_for('settings'))
+
+@app.route('/youtube/auth')
+@login_required
+def youtube_auth():
+    """Start the YouTube OAuth flow."""
+    from youtube_client import YouTubeClient
+    
+    try:
+        youtube_client = YouTubeClient()
+        
+        # Generate the authorization URL
+        redirect_uri = url_for('youtube_callback', _external=True)
+        auth_url = youtube_client.generate_authorization_url(redirect_uri)
+        
+        # Redirect to Google's OAuth page
+        return redirect(auth_url)
+    except Exception as e:
+        flash(f'Error initiating YouTube authorization: {str(e)}')
+        return redirect(url_for('settings'))
+
+@app.route('/youtube/callback')
+@login_required
+def youtube_callback():
+    """Handle the YouTube OAuth callback."""
+    from youtube_client import YouTubeClient
+    from models import User
+    
+    try:
+        # Get the authorization response URL
+        authorization_response = request.url
+        
+        # Handle the response
+        youtube_client = YouTubeClient()
+        result = youtube_client.handle_authorization_response(authorization_response)
+        
+        if result['success']:
+            # Store the refresh token in the session for the user to see
+            session['youtube_refresh_token'] = result['refresh_token']
+            
+            flash('YouTube authorization successful! The refresh token has been generated. ' +
+                  'Please copy this token from the settings page and set it as your YOUTUBE_REFRESH_TOKEN environment variable.')
+        else:
+            flash(f'YouTube authorization failed: {result.get("error", "Unknown error")}')
+    except Exception as e:
+        flash(f'Error completing YouTube authorization: {str(e)}')
     
     return redirect(url_for('settings'))
 
