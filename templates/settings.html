@@ -26,9 +26,35 @@
                         <h5 class="border-bottom pb-2 mb-3">Spotify Configuration</h5>
                         
                         <div class="mb-3">
-                            <label for="spotify_podcast_id" class="form-label">Spotify Podcast ID</label>
+                            <label for="spotify_client_id" class="form-label">Spotify Client ID</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fab fa-spotify"></i></span>
+                                <input type="text" class="form-control" id="spotify_client_id" name="spotify_client_id" 
+                                       value="{{ config.spotify_client_id if config else '' }}" 
+                                       placeholder="Your Spotify API Client ID">
+                            </div>
+                            <div class="form-text">
+                                Get this from your Spotify Developer Dashboard
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="spotify_client_secret" class="form-label">Spotify Client Secret</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="spotify_client_secret" name="spotify_client_secret" 
+                                       value="{{ config.spotify_client_secret if config else '' }}" 
+                                       placeholder="Your Spotify API Client Secret">
+                            </div>
+                            <div class="form-text">
+                                Get this from your Spotify Developer Dashboard
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="spotify_podcast_id" class="form-label">Spotify Podcast ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-podcast"></i></span>
                                 <input type="text" class="form-control" id="spotify_podcast_id" name="spotify_podcast_id" 
                                        value="{{ config.spotify_podcast_id if config else '' }}" 
                                        placeholder="e.g. 6kAsbP8pxwaU2kPibKTuHE">
@@ -47,9 +73,48 @@
                         <h5 class="border-bottom pb-2 mb-3">YouTube Configuration</h5>
                         
                         <div class="mb-3">
-                            <label for="youtube_channel_id" class="form-label">YouTube Channel ID</label>
+                            <label for="youtube_api_key" class="form-label">YouTube API Key</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fab fa-youtube"></i></span>
+                                <input type="text" class="form-control" id="youtube_api_key" name="youtube_api_key" 
+                                       value="{{ config.youtube_api_key if config else '' }}" 
+                                       placeholder="Your YouTube API Key">
+                            </div>
+                            <div class="form-text">
+                                Get this from the Google Cloud Console
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="youtube_client_id" class="form-label">YouTube OAuth Client ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fab fa-google"></i></span>
+                                <input type="text" class="form-control" id="youtube_client_id" name="youtube_client_id" 
+                                       value="{{ config.youtube_client_id if config else '' }}" 
+                                       placeholder="Your Google OAuth Client ID">
+                            </div>
+                            <div class="form-text">
+                                Get this from the Google Cloud Console
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="youtube_client_secret" class="form-label">YouTube OAuth Client Secret</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="youtube_client_secret" name="youtube_client_secret" 
+                                       value="{{ config.youtube_client_secret if config else '' }}" 
+                                       placeholder="Your Google OAuth Client Secret">
+                            </div>
+                            <div class="form-text">
+                                Get this from the Google Cloud Console
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="youtube_channel_id" class="form-label">YouTube Channel ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-video"></i></span>
                                 <input type="text" class="form-control" id="youtube_channel_id" name="youtube_channel_id" 
                                        value="{{ config.youtube_channel_id if config else '' }}" 
                                        placeholder="e.g. UC1234567890abcdefg">
@@ -62,7 +127,20 @@
                             </div>
                         </div>
                         
-                        {% if session.get('youtube_refresh_token') %}
+                        {% if config and config.youtube_refresh_token %}
+                        <div class="mb-3">
+                            <label class="form-label">YouTube Refresh Token</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="{{ config.youtube_refresh_token }}" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('{{ config.youtube_refresh_token }}')">
+                                    <i class="fas fa-copy me-1"></i>Copy
+                                </button>
+                            </div>
+                            <div class="form-text text-success">
+                                <i class="fas fa-info-circle me-1"></i>This refresh token is saved in your settings and will be used for YouTube uploads.
+                            </div>
+                        </div>
+                        {% elif session.get('youtube_refresh_token') %}
                         <div class="mb-3">
                             <label class="form-label">YouTube Refresh Token</label>
                             <div class="input-group">
@@ -72,7 +150,13 @@
                                 </button>
                             </div>
                             <div class="form-text text-success">
-                                <i class="fas fa-info-circle me-1"></i>Save this refresh token as your YOUTUBE_REFRESH_TOKEN environment variable.
+                                <i class="fas fa-info-circle me-1"></i>This refresh token will be saved when you click "Save Settings".
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-1"></i>After saving your YouTube client ID and secret, you can generate a refresh token by clicking "Test Connection".
                             </div>
                         </div>
                         {% endif %}
@@ -207,10 +291,10 @@
                 
                 <div class="alert alert-secondary mt-3">
                     <h6 class="alert-heading"><i class="fab fa-youtube me-2"></i>YouTube API</h6>
-                    <p class="small mb-0">Requires OAuth 2.0 credentials with YouTube Data API v3 access.</p>
+                    <p class="small mb-0">Requires API Key and OAuth 2.0 credentials with YouTube Data API v3 access.</p>
                 </div>
                 
-                <p class="mt-3 small">These credentials should be provided as environment variables in your application environment.</p>
+                <p class="mt-3 small">Enter your API credentials in the settings form to the left.</p>
             </div>
         </div>
     </div>

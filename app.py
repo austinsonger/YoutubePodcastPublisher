@@ -142,9 +142,20 @@ def settings():
         if not config:
             config = PodcastConfig(user_id=current_user.id)
         
-        # Update configuration
+        # Update Spotify configuration
+        config.spotify_client_id = request.form.get('spotify_client_id')
+        config.spotify_client_secret = request.form.get('spotify_client_secret')
         config.spotify_podcast_id = request.form.get('spotify_podcast_id')
+        
+        # Update YouTube configuration
+        config.youtube_api_key = request.form.get('youtube_api_key')
+        config.youtube_client_id = request.form.get('youtube_client_id')
+        config.youtube_client_secret = request.form.get('youtube_client_secret')
+        if 'youtube_refresh_token' in session:
+            config.youtube_refresh_token = session.get('youtube_refresh_token')
         config.youtube_channel_id = request.form.get('youtube_channel_id')
+        
+        # Update video settings
         config.check_interval = int(request.form.get('check_interval', 60))
         config.video_height = int(request.form.get('video_height', 720))
         config.video_width = int(request.form.get('video_width', 1280))
@@ -154,8 +165,16 @@ def settings():
         db.session.add(config)
         db.session.commit()
         
+        # Clear the YouTube refresh token from the session if it was saved to the database
+        if 'youtube_refresh_token' in session:
+            del session['youtube_refresh_token']
+            
         flash('Settings updated successfully.')
         return redirect(url_for('settings'))
+    
+    # If we have a refresh token in the database, add it to the session for display
+    if config and config.youtube_refresh_token:
+        session['youtube_refresh_token'] = config.youtube_refresh_token
     
     return render_template('settings.html', config=config)
 
@@ -186,8 +205,16 @@ def test_spotify():
         flash('Please configure your Spotify podcast ID first.')
         return redirect(url_for('settings'))
     
+    if not config.spotify_client_id or not config.spotify_client_secret:
+        flash('Please provide your Spotify API credentials.')
+        return redirect(url_for('settings'))
+    
     try:
-        spotify_client = SpotifyClient()
+        # Use the credentials from the database
+        spotify_client = SpotifyClient(
+            client_id=config.spotify_client_id,
+            client_secret=config.spotify_client_secret
+        )
         podcast_info = spotify_client.get_podcast_info(config.spotify_podcast_id)
         flash(f'Successfully connected to Spotify. Podcast name: {podcast_info.get("name", "Unknown")}')
     except Exception as e:
@@ -199,9 +226,22 @@ def test_spotify():
 @login_required
 def test_youtube():
     from youtube_client import YouTubeClient
+    from models import PodcastConfig
+    
+    config = PodcastConfig.query.filter_by(user_id=current_user.id).first()
+    
+    if not config:
+        flash('Please configure your settings first.')
+        return redirect(url_for('settings'))
     
     try:
-        youtube_client = YouTubeClient()
+        # Use the credentials from the database
+        youtube_client = YouTubeClient(
+            api_key=config.youtube_api_key,
+            client_id=config.youtube_client_id,
+            client_secret=config.youtube_client_secret,
+            refresh_token=config.youtube_refresh_token
+        )
         
         # If we don't have a refresh token, redirect to authorization
         if not youtube_client.refresh_token and youtube_client.client_id and youtube_client.client_secret:
@@ -210,6 +250,12 @@ def test_youtube():
         # If we have a refresh token, try to use it
         if youtube_client.youtube:
             channel_info = youtube_client.get_channel_info()
+            
+            # Store the channel ID if it's not already set
+            if channel_info and not config.youtube_channel_id:
+                config.youtube_channel_id = channel_info.get('id')
+                db.session.commit()
+                
             flash(f'Successfully connected to YouTube. Channel name: {channel_info.get("title", "Unknown")}')
         else:
             flash('YouTube API client not initialized. Please complete authorization.')
@@ -224,9 +270,20 @@ def test_youtube():
 def youtube_auth():
     """Start the YouTube OAuth flow."""
     from youtube_client import YouTubeClient
+    from models import PodcastConfig
+    
+    config = PodcastConfig.query.filter_by(user_id=current_user.id).first()
+    
+    if not config or not config.youtube_client_id or not config.youtube_client_secret:
+        flash('Please provide your YouTube API client ID and client secret first.')
+        return redirect(url_for('settings'))
     
     try:
-        youtube_client = YouTubeClient()
+        # Use the credentials from the database
+        youtube_client = YouTubeClient(
+            client_id=config.youtube_client_id,
+            client_secret=config.youtube_client_secret
+        )
         
         # Generate the authorization URL
         redirect_uri = url_for('youtube_callback', _external=True)
@@ -243,22 +300,36 @@ def youtube_auth():
 def youtube_callback():
     """Handle the YouTube OAuth callback."""
     from youtube_client import YouTubeClient
-    from models import User
+    from models import PodcastConfig
+    
+    config = PodcastConfig.query.filter_by(user_id=current_user.id).first()
+    
+    if not config:
+        flash('Configuration not found.')
+        return redirect(url_for('settings'))
     
     try:
         # Get the authorization response URL
         authorization_response = request.url
         
+        # Use the credentials from the database
+        youtube_client = YouTubeClient(
+            client_id=config.youtube_client_id,
+            client_secret=config.youtube_client_secret
+        )
+        
         # Handle the response
-        youtube_client = YouTubeClient()
         result = youtube_client.handle_authorization_response(authorization_response)
         
         if result['success']:
-            # Store the refresh token in the session for the user to see
+            # Store the refresh token in the session for the form to display
             session['youtube_refresh_token'] = result['refresh_token']
             
-            flash('YouTube authorization successful! The refresh token has been generated. ' +
-                  'Please copy this token from the settings page and set it as your YOUTUBE_REFRESH_TOKEN environment variable.')
+            # Also save it to the database
+            config.youtube_refresh_token = result['refresh_token']
+            db.session.commit()
+            
+            flash('YouTube authorization successful! The refresh token has been generated and saved to your settings.')
         else:
             flash(f'YouTube authorization failed: {result.get("error", "Unknown error")}')
     except Exception as e:

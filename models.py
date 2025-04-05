@@ -18,9 +18,15 @@ class PodcastConfig(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # Spotify settings
+    spotify_client_id = db.Column(db.String(128))
+    spotify_client_secret = db.Column(db.String(128))
     spotify_podcast_id = db.Column(db.String(128))
     
     # YouTube settings
+    youtube_api_key = db.Column(db.String(128))
+    youtube_client_id = db.Column(db.String(128))
+    youtube_client_secret = db.Column(db.String(128))
+    youtube_refresh_token = db.Column(db.String(512))
     youtube_channel_id = db.Column(db.String(128))
     
     # Conversion settings

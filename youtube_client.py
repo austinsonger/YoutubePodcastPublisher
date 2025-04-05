@@ -23,11 +23,12 @@ logger = logging.getLogger(__name__)
 SCOPES = ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube.readonly']
 
 class YouTubeClient:
-    def __init__(self):
-        self.api_key = YOUTUBE_API_KEY
-        self.client_id = YOUTUBE_CLIENT_ID
-        self.client_secret = YOUTUBE_CLIENT_SECRET
-        self.refresh_token = YOUTUBE_REFRESH_TOKEN
+    def __init__(self, api_key=None, client_id=None, client_secret=None, refresh_token=None):
+        # Use provided credentials if available, otherwise fall back to environment variables
+        self.api_key = api_key or YOUTUBE_API_KEY
+        self.client_id = client_id or YOUTUBE_CLIENT_ID
+        self.client_secret = client_secret or YOUTUBE_CLIENT_SECRET
+        self.refresh_token = refresh_token or YOUTUBE_REFRESH_TOKEN
         self.youtube = self._authenticate()
     
     def _authenticate(self):

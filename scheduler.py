@@ -93,8 +93,16 @@ def check_and_process_new_episodes(config_id):
             config.last_check = datetime.datetime.utcnow()
             db.session.commit()
             
-            # Initialize clients
-            spotify_client = SpotifyClient()
+            # Check if we have Spotify credentials
+            if not config.spotify_client_id or not config.spotify_client_secret:
+                logger.warning(f"Spotify API credentials not configured for config ID {config_id}")
+                return 0
+                
+            # Initialize clients with credentials from the database
+            spotify_client = SpotifyClient(
+                client_id=config.spotify_client_id,
+                client_secret=config.spotify_client_secret
+            )
             
             # Get latest episodes
             episodes_data = spotify_client.get_podcast_episodes(config.spotify_podcast_id)
@@ -177,11 +185,40 @@ def process_episode_job(job_id):
             
             # Initialize clients
             converter = AudioToVideoConverter()
-            youtube_client = YouTubeClient()
+            
+            # Check if we have YouTube credentials
+            if not config.youtube_api_key or not config.youtube_refresh_token:
+                logger.warning(f"YouTube API credentials not configured for user {job.user_id}")
+                job.status = 'failed'
+                job.error_message = "YouTube API credentials not configured"
+                job.completed_at = datetime.datetime.utcnow()
+                db.session.commit()
+                return False
+                
+            # Initialize YouTube client with credentials from the database
+            youtube_client = YouTubeClient(
+                api_key=config.youtube_api_key,
+                client_id=config.youtube_client_id,
+                client_secret=config.youtube_client_secret,
+                refresh_token=config.youtube_refresh_token
+            )
             
             # If audio_url is missing, get detailed episode info
             if not job.audio_url:
-                spotify_client = SpotifyClient()
+                # Check if we have Spotify credentials
+                if not config.spotify_client_id or not config.spotify_client_secret:
+                    logger.warning(f"Spotify API credentials not configured for user {job.user_id}")
+                    job.status = 'failed'
+                    job.error_message = "Spotify API credentials not configured"
+                    job.completed_at = datetime.datetime.utcnow()
+                    db.session.commit()
+                    return False
+                    
+                # Initialize Spotify client with credentials from the database
+                spotify_client = SpotifyClient(
+                    client_id=config.spotify_client_id,
+                    client_secret=config.spotify_client_secret
+                )
                 episode_info = spotify_client.get_episode_info(job.episode_id)
                 job.audio_url = episode_info.get('audio_preview_url', '')
                 db.session.commit()

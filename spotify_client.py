@@ -9,17 +9,19 @@ from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 logger = logging.getLogger(__name__)
 
 class SpotifyClient:
-    def __init__(self):
-        self.client_id = SPOTIFY_CLIENT_ID
-        self.client_secret = SPOTIFY_CLIENT_SECRET
+    def __init__(self, client_id=None, client_secret=None):
+        # Use provided credentials if available, otherwise fall back to environment variables
+        self.client_id = client_id or SPOTIFY_CLIENT_ID
+        self.client_secret = client_secret or SPOTIFY_CLIENT_SECRET
         self.access_token = None
         self.token_expiry = 0
         
         if not self.client_id or not self.client_secret:
-            logger.warning("Spotify API credentials not found in environment variables.")
+            logger.warning("Spotify API credentials not found in parameters or environment variables.")
         
-        # Get access token immediately upon initialization
-        self._get_access_token()
+        # Get access token immediately upon initialization if credentials are available
+        if self.client_id and self.client_secret:
+            self._get_access_token()
     
     def _get_access_token(self):
         """Get a new access token from Spotify API."""
