@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Podcast to YouTube Converter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-cog me-2"></i>Settings
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-podcast me-2"></i>Podcast Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('settings') }}" method="post">
+                    <!-- Spotify Configuration -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">Spotify Configuration</h5>
+                        
+                        <div class="mb-3">
+                            <label for="spotify_podcast_id" class="form-label">Spotify Podcast ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fab fa-spotify"></i></span>
+                                <input type="text" class="form-control" id="spotify_podcast_id" name="spotify_podcast_id" 
+                                       value="{{ config.spotify_podcast_id if config else '' }}" 
+                                       placeholder="e.g. 6kAsbP8pxwaU2kPibKTuHE">
+                                <button type="submit" formaction="{{ url_for('test_spotify') }}" class="btn btn-success">
+                                    <i class="fas fa-check-circle me-1"></i>Test Connection
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Find this in your Spotify podcast URL: https://open.spotify.com/show/YOUR_PODCAST_ID
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- YouTube Configuration -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">YouTube Configuration</h5>
+                        
+                        <div class="mb-3">
+                            <label for="youtube_channel_id" class="form-label">YouTube Channel ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fab fa-youtube"></i></span>
+                                <input type="text" class="form-control" id="youtube_channel_id" name="youtube_channel_id" 
+                                       value="{{ config.youtube_channel_id if config else '' }}" 
+                                       placeholder="e.g. UC1234567890abcdefg">
+                                <button type="submit" formaction="{{ url_for('test_youtube') }}" class="btn btn-success">
+                                    <i class="fas fa-check-circle me-1"></i>Test Connection
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                You can find this in your YouTube channel settings or URL
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Settings -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">Video Settings</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="video_width" class="form-label">Video Width</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-arrows-alt-h"></i></span>
+                                    <input type="number" class="form-control" id="video_width" name="video_width" 
+                                           value="{{ config.video_width if config else 1280 }}" 
+                                           min="640" max="1920" step="16">
+                                    <span class="input-group-text">px</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="video_height" class="form-label">Video Height</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-arrows-alt-v"></i></span>
+                                    <input type="number" class="form-control" id="video_height" name="video_height" 
+                                           value="{{ config.video_height if config else 720 }}" 
+                                           min="360" max="1080" step="16">
+                                    <span class="input-group-text">px</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="video_bitrate" class="form-label">Video Bitrate</label>
+                            <select class="form-select" id="video_bitrate" name="video_bitrate">
+                                <option value="500k" {% if config and config.video_bitrate == '500k' %}selected{% endif %}>Low (500k)</option>
+                                <option value="1M" {% if not config or config.video_bitrate == '1M' %}selected{% endif %}>Medium (1M)</option>
+                                <option value="2M" {% if config and config.video_bitrate == '2M' %}selected{% endif %}>High (2M)</option>
+                                <option value="4M" {% if config and config.video_bitrate == '4M' %}selected{% endif %}>Very High (4M)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="logo_url" class="form-label">Podcast Logo URL</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-image"></i></span>
+                                <input type="url" class="form-control" id="logo_url" name="logo_url" 
+                                       value="{{ config.logo_url if config else '' }}" 
+                                       placeholder="https://example.com/your-podcast-logo.jpg">
+                            </div>
+                            <div class="form-text">
+                                URL to your podcast logo image. If not provided, we'll use the podcast artwork from Spotify.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Schedule Settings -->
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2 mb-3">Schedule Settings</h5>
+                        
+                        <div class="mb-3">
+                            <label for="check_interval" class="form-label">Check for New Episodes Every</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                <input type="number" class="form-control" id="check_interval" name="check_interval" 
+                                       value="{{ config.check_interval if config else 60 }}" 
+                                       min="15" max="1440">
+                                <span class="input-group-text">minutes</span>
+                            </div>
+                            <div class="form-text">
+                                How often to check for new podcast episodes (minimum 15 minutes)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-1"></i>Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>How It Works
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-check-circle me-2 text-success"></i>Automatic Monitoring</h6>
+                    <p class="small">The system will periodically check your Spotify podcast feed for new episodes based on your schedule settings.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-check-circle me-2 text-success"></i>Audio Download</h6>
+                    <p class="small">When a new episode is detected, the audio file will be automatically downloaded.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-check-circle me-2 text-success"></i>Video Conversion</h6>
+                    <p class="small">The audio will be converted to a video file with your podcast logo as the background image.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-check-circle me-2 text-success"></i>YouTube Upload</h6>
+                    <p class="small">The finished video will be automatically uploaded to your YouTube channel with appropriate title and description.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Requirements -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-key me-2"></i>API Requirements
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>To use this application, you need the following API credentials:</p>
+                
+                <div class="alert alert-secondary">
+                    <h6 class="alert-heading"><i class="fab fa-spotify me-2"></i>Spotify API</h6>
+                    <p class="small mb-0">Requires Client ID and Client Secret from the Spotify Developer Dashboard.</p>
+                </div>
+                
+                <div class="alert alert-secondary mt-3">
+                    <h6 class="alert-heading"><i class="fab fa-youtube me-2"></i>YouTube API</h6>
+                    <p class="small mb-0">Requires OAuth 2.0 credentials with YouTube Data API v3 access.</p>
+                </div>
+                
+                <p class="mt-3 small">These credentials should be provided as environment variables in your application environment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

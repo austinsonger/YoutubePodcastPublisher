@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Podcast to YouTube Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" action="{{ url_for('login') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" id="username" name="username" required autofocus>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer bg-light py-3 text-center">
+                <p class="mb-0">
+                    Don't have an account? 
+                    <a href="{{ url_for('register') }}">Register</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>About Podcast to YouTube Converter
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    This application automatically converts your Spotify podcast episodes to YouTube videos.
+                    It monitors your podcast feed for new episodes, converts them to videos with your podcast logo,
+                    and uploads them to your YouTube channel.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

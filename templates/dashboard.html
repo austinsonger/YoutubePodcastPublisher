@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Podcast to YouTube Converter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Status Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Status
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if config %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>Spotify Podcast:</strong>
+                        </div>
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Configured
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>YouTube Channel:</strong>
+                        </div>
+                        <span class="badge {% if config.youtube_channel_id %}bg-success{% else %}bg-danger{% endif %}">
+                            {% if config.youtube_channel_id %}
+                                <i class="fas fa-check me-1"></i>Configured
+                            {% else %}
+                                <i class="fas fa-times me-1"></i>Not Configured
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>Last Check:</strong>
+                        </div>
+                        <span>
+                            {% if config.last_check %}
+                                {{ config.last_check.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Check Interval:</strong>
+                        </div>
+                        <span>
+                            {{ config.check_interval or 60 }} minutes
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Your podcast configuration is not set up yet. Please go to 
+                        <a href="{{ url_for('settings') }}" class="alert-link">Settings</a> to configure your podcast.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <a href="{{ url_for('settings') }}" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i>Settings
+                </a>
+                {% if config %}
+                    <form action="{{ url_for('manual_check') }}" method="post">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-sync-alt me-1"></i>Check Now
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded bg-dark">
+                            <h3 class="mb-0">{{ jobs|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                            <small>Completed</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded bg-dark">
+                            <h3 class="mb-0">{{ jobs|selectattr('status', 'equalto', 'pending')|list|length }}</h3>
+                            <small>Pending</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded bg-dark">
+                            <h3 class="mb-0">{{ jobs|selectattr('status', 'equalto', 'processing')|list|length }}</h3>
+                            <small>Processing</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded bg-dark">
+                            <h3 class="mb-0">{{ jobs|selectattr('status', 'equalto', 'failed')|list|length }}</h3>
+                            <small>Failed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-light text-end">
+                <a href="{{ url_for('history') }}" class="btn btn-info">
+                    <i class="fas fa-history me-1"></i>View History
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Jobs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-alt me-2"></i>Recent Jobs
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Episode</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>YouTube</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs %}
+                                    <tr>
+                                        <td>{{ job.episode_title }}</td>
+                                        <td>
+                                            {% if job.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif job.status == 'processing' %}
+                                                <span class="badge bg-primary">Processing</span>
+                                            {% elif job.status == 'pending' %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% elif job.status == 'failed' %}
+                                                <span class="badge bg-danger" data-bs-toggle="tooltip" 
+                                                      title="{{ job.error_message }}">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if job.youtube_video_url %}
+                                                <a href="{{ job.youtube_video_url }}" target="_blank" class="btn btn-sm btn-danger">
+                                                    <i class="fab fa-youtube me-1"></i>View
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Not uploaded</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center">
+                        <div class="text-muted mb-3">
+                            <i class="fas fa-inbox fa-4x"></i>
+                        </div>
+                        <h5>No jobs found</h5>
+                        <p>
+                            Your podcast conversion jobs will appear here once they're created.
+                            {% if not config %}
+                                Please configure your podcast settings first.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+            {% if jobs %}
+                <div class="card-footer bg-light text-end">
+                    <a href="{{ url_for('history') }}" class="btn btn-secondary">
+                        <i class="fas fa-list me-1"></i>View All Jobs
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Getting Started Guide (only show if not configured) -->
+{% if not config %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2"></i>Getting Started
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="bg-primary rounded-circle text-center text-white" style="width: 40px; height: 40px; line-height: 40px;">1</div>
+                                </div>
+                                <div>
+                                    <h5>Connect Your Spotify Podcast</h5>
+                                    <p class="mb-0">Enter your Spotify podcast ID in settings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="bg-primary rounded-circle text-center text-white" style="width: 40px; height: 40px; line-height: 40px;">2</div>
+                                </div>
+                                <div>
+                                    <h5>Configure YouTube</h5>
+                                    <p class="mb-0">Set up your YouTube channel integration</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="bg-primary rounded-circle text-center text-white" style="width: 40px; height: 40px; line-height: 40px;">3</div>
+                                </div>
+                                <div>
+                                    <h5>Set Your Preferences</h5>
+                                    <p class="mb-0">Choose video quality and upload frequency</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <a href="{{ url_for('settings') }}" class="btn btn-primary">
+                        <i class="fas fa-cog me-1"></i>Go to Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Enable tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

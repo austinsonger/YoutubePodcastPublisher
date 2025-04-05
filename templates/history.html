@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Job History - Podcast to YouTube Converter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-history me-2"></i>Job History
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-alt me-2"></i>Conversion Jobs
+                </h5>
+                
+                <!-- Status filter -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-dark dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('history') }}">All Jobs</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('history', status='completed') }}">Completed</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('history', status='processing') }}">Processing</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('history', status='pending') }}">Pending</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('history', status='failed') }}">Failed</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if jobs.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Episode</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Completed</th>
+                                    <th>YouTube</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs.items %}
+                                    <tr>
+                                        <td>
+                                            <div>{{ job.episode_title }}</div>
+                                            <small class="text-muted">ID: {{ job.episode_id }}</small>
+                                        </td>
+                                        <td>
+                                            {% if job.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif job.status == 'processing' %}
+                                                <span class="badge bg-primary">Processing</span>
+                                            {% elif job.status == 'pending' %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% elif job.status == 'failed' %}
+                                                <span class="badge bg-danger" data-bs-toggle="tooltip" 
+                                                      title="{{ job.error_message }}">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if job.completed_at %}
+                                                {{ job.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if job.youtube_video_url %}
+                                                <a href="{{ job.youtube_video_url }}" target="_blank" class="btn btn-sm btn-danger">
+                                                    <i class="fab fa-youtube me-1"></i>View
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Not uploaded</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if jobs.pages > 1 %}
+                        <div class="d-flex justify-content-center py-3">
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination">
+                                    <!-- Previous page -->
+                                    {% if jobs.has_prev %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('history', page=jobs.prev_num) }}" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <a class="page-link" href="#" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    <!-- Page numbers -->
+                                    {% for page_num in jobs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                        {% if page_num %}
+                                            {% if page_num == jobs.page %}
+                                                <li class="page-item active">
+                                                    <a class="page-link" href="{{ url_for('history', page=page_num) }}">{{ page_num }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('history', page=page_num) }}">{{ page_num }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#">...</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    <!-- Next page -->
+                                    {% if jobs.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('history', page=jobs.next_num) }}" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <a class="page-link" href="#" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="p-5 text-center">
+                        <div class="text-muted mb-3">
+                            <i class="fas fa-inbox fa-4x"></i>
+                        </div>
+                        <h5>No jobs found</h5>
+                        <p>
+                            Your podcast conversion jobs will appear here once they're created.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Enable tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

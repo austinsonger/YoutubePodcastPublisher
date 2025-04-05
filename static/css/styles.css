@@ -1,0 +1,54 @@
+/* Custom styles for Podcast to YouTube Converter */
+
+/* Additional spacing for main content */
+main.container {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+/* Status badges */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+/* Card hover effects */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Dashboard stat boxes */
+.border.rounded {
+    transition: background-color 0.2s;
+}
+
+.border.rounded:hover {
+    background-color: var(--bs-dark) !important;
+}
+
+/* Button spacing in card footers */
+.card-footer .btn {
+    margin-left: 0.25rem;
+}
+
+/* Form select fields */
+.form-select {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+}
+
+/* Table hover effects */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Tooltip styles */
+.tooltip .tooltip-inner {
+    max-width: 300px;
+}
